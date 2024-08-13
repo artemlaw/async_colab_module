@@ -67,7 +67,6 @@ async def get_price_dict(wb_client):
 
 
 async def get_dict_for_report(products, ms_client, wb_client, fbs=True):
-    print('Получение данных для отчёта')
     category_dict_ = get_category_dict(wb_client, fbs=fbs)
     tariffs_logistic_data_ = wb_client.get_tariffs_for_box()
     ms_stocks_dict_ = get_ms_stocks_dict(ms_client, products)
@@ -77,7 +76,6 @@ async def get_dict_for_report(products, ms_client, wb_client, fbs=True):
                                                                                                 tariffs_logistic_data_,
                                                                                                 ms_stocks_dict_,
                                                                                                 wb_prices_dict_)
-
     return {
         'ms_stocks_dict': ms_stocks_dict,
         'category_dict': category_dict,

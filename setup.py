@@ -4,7 +4,7 @@ setup(
     name='async_colab_module',
     version='0.0.1',
     packages=find_packages(),
-    install_requires=['asyncio', 'aiohttp', 'aiolimiter', 'ipywidgets', 'ipython'],
+    install_requires=['asyncio', 'aiohttp', 'aiolimiter', 'ipywidgets', 'ipython', 'pandas', 'openpyxl'],
     extras_require={
         "dev": ["pytest",],
     },
