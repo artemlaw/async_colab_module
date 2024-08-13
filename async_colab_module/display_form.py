@@ -168,8 +168,7 @@ async def get_report(wb_client, base_dict, nm_ids_dict, from_date, to_date):
         print('На указанный интервал нет данных для отчета')
 
 
-# Функция для получения значения после ввода и проверки формата
- def submit_form(wb_client, base_dict, nm_ids_dict, from_input, to_input):
+def submit_form(wb_client, base_dict, nm_ids_dict, from_input, to_input):
     from_input_value = from_input.value
     to_input_value = to_input.value
     try:
@@ -181,7 +180,7 @@ async def get_report(wb_client, base_dict, nm_ids_dict, from_date, to_date):
         print("Пожалуйста, введите корректную дату и время в формате YYYY-MM-DD HH:MM.")
 
 
-async def get_display_form(wb_client, base_dict, nm_ids_dict):
+def get_display_form(wb_client, base_dict, nm_ids_dict):
     to_date = datetime.now().date()
     # Получаем вчерашний день (from_date)
     from_date = to_date - timedelta(days=1)
