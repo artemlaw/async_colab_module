@@ -217,8 +217,3 @@ def get_display_form(wb_client, base_dict, nm_ids_dict):
     display(from_input)
     display(to_input)
     display(button)
-
-
-if __name__ == '__main__':
-
-    get_display_form()
