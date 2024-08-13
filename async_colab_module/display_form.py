@@ -27,6 +27,7 @@ class ProgressBar(widgets.IntProgress):
 async def get_report(wb_client, base_dict, nm_ids_dict, from_date, to_date):
     progress_bar = ProgressBar(description='Формирование отчета:', bar_style='success')
     display(progress_bar)
+    print(f'Получаем заказы FBO за период: {from_date} - {to_date}')
     orders = await wb_client.get_orders(from_date)
     # TODO: Изменить на гейзер
     if from_date != to_date:
