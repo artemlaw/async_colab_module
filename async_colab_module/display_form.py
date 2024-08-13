@@ -169,19 +169,19 @@ async def get_report(wb_client, base_dict, nm_ids_dict, from_date, to_date):
 
 
 # Функция для получения значения после ввода и проверки формата
-async def submit_form(wb_client, base_dict, nm_ids_dict, from_input, to_input):
+ def submit_form(wb_client, base_dict, nm_ids_dict, from_input, to_input):
     from_input_value = from_input.value
     to_input_value = to_input.value
     try:
         # Проверяем корректность формата даты и времени
         from_date = datetime.strptime(from_input_value, '%Y-%m-%d %H:%M')
         to_date = datetime.strptime(to_input_value, '%Y-%m-%d %H:%M')
-        await get_report(wb_client, base_dict, nm_ids_dict, from_date, to_date)
+        asyncio.create_task(get_report(wb_client, base_dict, nm_ids_dict, from_date, to_date))
     except ValueError:
         print("Пожалуйста, введите корректную дату и время в формате YYYY-MM-DD HH:MM.")
 
 
-def get_display_form(wb_client, base_dict, nm_ids_dict):
+async def get_display_form(wb_client, base_dict, nm_ids_dict):
     to_date = datetime.now().date()
     # Получаем вчерашний день (from_date)
     from_date = to_date - timedelta(days=1)
@@ -198,12 +198,8 @@ def get_display_form(wb_client, base_dict, nm_ids_dict):
     )
     # Кнопка для обработки значений формы и вызова основной функции
     button = widgets.Button(description="Сформировать отчет", button_style='info')
-    # button.on_click(lambda b: submit_form(wb_client, base_dict, nm_ids_dict, from_input, to_input))
+    button.on_click(lambda b: submit_form(wb_client, base_dict, nm_ids_dict, from_input, to_input))
 
-    def on_button_click(b):
-        asyncio.create_task(submit_form(wb_client, base_dict, nm_ids_dict, from_input, to_input))
-
-    button.on_click(on_button_click)
     # Отображаем элементы виджета
     display(from_input)
     display(to_input)
