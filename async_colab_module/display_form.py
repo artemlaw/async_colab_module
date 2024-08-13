@@ -23,32 +23,21 @@ class ProgressBar(widgets.IntProgress):
         self.value = value
 
 
-# TODO: Удалить после так как будет импортирована из utils
-def get_report_(from_date, to_date):
-    from_date = f'{from_date}.000'
-    to_date = f'{to_date}.000'
-    print(f'Формирую отчет по заказам от {from_date} до {to_date}')
-    progress_bar = ProgressBar(description='Формирование отчета:', bar_style='success')
-    display(progress_bar)
-    progress_bar.update(25)
-    progress_bar.update(50)
-    progress_bar.update(75)
-    progress_bar.update(100)
-
-
 # Функция для запуска отчета
 async def get_report(wb_client, base_dict, nm_ids_dict, from_date, to_date):
+    progress_bar = ProgressBar(description='Формирование отчета:', bar_style='success')
+    display(progress_bar)
     orders = await wb_client.get_orders(from_date)
     # TODO: Изменить на гейзер
     if from_date != to_date:
         time.sleep(20)
         orders.extend(await wb_client.get_orders(to_date))
-
+    progress_bar.update(25)
     orders_ = [order for order in orders if order.get('orderType') == 'Клиентский'
                and not order.get('isCancel')
               #  and order.get('srid') not in rids
                and order.get('sticker') == '0']
-
+    progress_bar.update(30)
     print(f'Получили заказов FBO за период: {len(orders_)}')
 
     orders_for_report = [
@@ -58,6 +47,7 @@ async def get_report(wb_client, base_dict, nm_ids_dict, from_date, to_date):
     ]
     if orders_for_report:
         print(f'Формирую отчет по заказам от {from_date} до {to_date}')
+        progress_bar.update(50)
         pd.set_option('display.max_columns', None)
         df = pd.DataFrame(orders_for_report)
         path_xls_file = 'wb_рентабельность_fbo.xlsx'
@@ -97,7 +87,7 @@ async def get_report(wb_client, base_dict, nm_ids_dict, from_date, to_date):
             'order_reward': 'sum',
             'order_profit': 'sum'
         }).to_frame().T
-
+        progress_bar.update(75)
         overall_totals['name'] = 'Итог'
         overall_totals['profitability'] = round((overall_totals['profit'] / overall_totals['item_price']) * 100, 1)
         overall_totals['order_profitability'] = round(
@@ -118,7 +108,7 @@ async def get_report(wb_client, base_dict, nm_ids_dict, from_date, to_date):
         cascade_table.index = cascade_table.index + 1
         cascade_table = cascade_table.sort_index()
         tab_styles = TabStyles()
-
+        progress_bar.update(85)
         with pd.ExcelWriter(path_xls_file, engine='openpyxl', mode='a') as writer:
             cascade_table.to_excel(writer, sheet_name='Сводная', index=False)
 
@@ -170,10 +160,11 @@ async def get_report(wb_client, base_dict, nm_ids_dict, from_date, to_date):
             ws.auto_filter.ref = ws.dimensions
             # Зафиксировать ячейки
             ws.freeze_panes = 'B3'
-
+        progress_bar.update(100)
         print('Файл отчета готов')
         files.download(path_xls_file)
     else:
+        progress_bar.update(100)
         print('На указанный интервал нет данных для отчета')
 
 
