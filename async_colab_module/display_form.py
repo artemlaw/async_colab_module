@@ -203,7 +203,7 @@ def get_display_form(wb_client, base_dict, nm_ids_dict):
     def on_button_click(b):
         asyncio.create_task(submit_form(wb_client, base_dict, nm_ids_dict, from_input, to_input))
 
-    button.on_click(lambda b: on_button_click)
+    button.on_click(on_button_click)
     # Отображаем элементы виджета
     display(from_input)
     display(to_input)
