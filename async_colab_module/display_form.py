@@ -1,7 +1,6 @@
 import ipywidgets as widgets
 from IPython.display import display
 from datetime import datetime, timedelta
-import time
 
 
 class ProgressBar(widgets.IntProgress):
@@ -18,11 +17,6 @@ class ProgressBar(widgets.IntProgress):
         self.value = value
 
 
-# Функция для обновления прогресс-бара
-def update_progress_bar(bar, value):
-    bar.update(value)
-
-
 # TODO: Удалить после так как будет импортирована из utils
 def get_report(from_date, to_date):
     from_date = f'{from_date}.000'
@@ -30,9 +24,10 @@ def get_report(from_date, to_date):
     print(f'Формирую отчет по заказам от {from_date} до {to_date}')
     progress_bar = ProgressBar(description='Формирование отчета:', bar_style='success')
     display(progress_bar)
-    update_progress_bar(progress_bar, 10)
-    update_progress_bar(progress_bar, 50)
-    update_progress_bar(progress_bar, 100)
+    progress_bar.update(25)
+    progress_bar.update(50)
+    progress_bar.update(75)
+    progress_bar.update(100)
 
 
 # Функция для получения значения после ввода и проверки формата
@@ -66,19 +61,12 @@ def get_display_form():
     # Кнопка для обработки значений формы и вызова основной функции
     button = widgets.Button(description="Сформировать отчет", button_style='info')
     button.on_click(lambda b: submit_form(from_input, to_input))
-
-    # Отображаем виджет
+    # Отображаем элементы виджета
     display(from_input)
     display(to_input)
     display(button)
 
 
 if __name__ == '__main__':
-    # Блок выполнения функции
-    print('Запускаем программу')
-    # MS_API_TOKEN = 'd7c6ef710489f9683336becc48d41b5b2e57da85'
-    # client = MoySklad(MS_API_TOKEN)
-    print('Подгружаем нужные справочники')
-    # data_dict = get_dict_for_report(client)
 
     get_display_form()

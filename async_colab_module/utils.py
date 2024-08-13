@@ -1,8 +1,6 @@
 import os
 import re
-from dotenv import load_dotenv
-
-load_dotenv()
+import asyncio
 
 
 def get_api_tokens():
@@ -13,15 +11,16 @@ def get_api_tokens():
         return MS_API_TOKEN, WB_API_TOKEN
     except ImportError:
         pass
-
+    from dotenv import load_dotenv
+    load_dotenv()
     MS_API_TOKEN = os.getenv('MS_API_TOKEN')
     WB_API_TOKEN = os.getenv('WB_API_TOKEN')
 
     return MS_API_TOKEN, WB_API_TOKEN
 
 
-def get_category_dict(wb_client, fbs=True):
-    commission = wb_client.get_commission()
+async def get_category_dict(wb_client, fbs=True):
+    commission = await wb_client.get_commission()
     if fbs:
         key = 'kgvpMarketplace'
     else:
@@ -51,28 +50,33 @@ def get_stock_for_bundle(stocks_dict, product):
     return product_stock
 
 
-def get_ms_stocks_dict(ms_client, products):
+async def get_ms_stocks_dict(ms_client, products):
     print('Получение остатков номенклатуры')
-    stocks = ms_client.get_stock()
+    stocks = await ms_client.get_stock()
     stocks_dict = {stock['assortmentId']: stock['quantity'] for stock in stocks}
     wb_stocks_dict = {int(product['code']): get_stock_for_bundle(stocks_dict, product) for product in products}
     return wb_stocks_dict
 
 
-def get_price_dict(wb_client):
-    data = wb_client.get_product_prices()
+async def get_price_dict(wb_client):
+    data = await wb_client.get_product_prices()
     # TODO: Добавить возможность получения данных по другим размерам, либо изменить источник
     price_dict = {d['nmID']: {'price': d['sizes'][0]['discountedPrice'], 'discount': d['discount']} for d in data
                   if len(d['sizes']) == 1}
     return price_dict
 
 
-def get_dict_for_report(products, ms_client, wb_client, fbs=True):
-    # TODO: Переписать на асинхронные запросы
-    category_dict = get_category_dict(wb_client, fbs=fbs)
-    tariffs_logistic_data = wb_client.get_tariffs_for_box()
-    ms_stocks_dict = get_ms_stocks_dict(ms_client, products)
-    wb_prices_dict = get_price_dict(wb_client)
+async def get_dict_for_report(products, ms_client, wb_client, fbs=True):
+    print('Получение данных для отчёта')
+    category_dict_ = get_category_dict(wb_client, fbs=fbs)
+    tariffs_logistic_data_ = wb_client.get_tariffs_for_box()
+    ms_stocks_dict_ = get_ms_stocks_dict(ms_client, products)
+    wb_prices_dict_ = get_price_dict(wb_client)
+
+    category_dict, tariffs_logistic_data, ms_stocks_dict, wb_prices_dict = await asyncio.gather(category_dict_,
+                                                                                                tariffs_logistic_data_,
+                                                                                                ms_stocks_dict_,
+                                                                                                wb_prices_dict_)
 
     return {
         'ms_stocks_dict': ms_stocks_dict,

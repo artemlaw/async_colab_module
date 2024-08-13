@@ -10,20 +10,21 @@ logger = logging.getLogger('MoySklad')
 
 
 class MoySklad(AsyncHttpClient):
-    def __init__(self, api_key: str):
-        super().__init__()
+    def __init__(self, api_key: str, max_rete: int = 45, time_period: int = 3):
+        super().__init__(max_rete=max_rete, time_period=time_period)
         self.headers = {'Accept-Encoding': 'gzip', 'Authorization': api_key, 'Content-Type': 'application/json'}
         self.host = 'https://api.moysklad.ru/api/remap/1.2/'
 
     async def get_with_pagination(self, url, limit=1000):
         result = await self.get(url, params={'limit': 1, 'offset': 0})
-        size = result.get('meta', {}).get('size', 0)
         items = []
-        if size:
-            request_list = [self.get(url, params={'limit': limit, 'offset': i}) for i in range(0, size + limit, limit)]
-            requests = await asyncio.gather(*request_list)
-            for request in requests:
-                items += request.get('rows', [])
+        if result:
+            size = result.get('meta', {}).get('size', 0)
+            if size:
+                request_list = [self.get(url, params={'limit': limit, 'offset': i}) for i in range(0, size + limit, limit)]
+                requests = await asyncio.gather(*request_list)
+                for request in requests:
+                    items += request.get('rows', [])
         return items
 
     async def get_products_list(self):
@@ -48,8 +49,9 @@ class MoySklad(AsyncHttpClient):
 if __name__ == '__main__':
     ms_token, wb_token = get_api_tokens()
 
+
     async def main():
-        async with MoySklad(api_key=ms_token) as ms_client:
+        async with MoySklad(api_key=ms_token, max_rete=45, time_period=3) as ms_client:
             start_time = time.time()
             products_task = ms_client.get_products_list()
             bundles_task = ms_client.get_bundles()
@@ -60,4 +62,6 @@ if __name__ == '__main__':
             print(f"Количество продуктов: {len(products)}")
             print(f"Количество пакетов: {len(bundles)}")
             print(time.time() - start_time)
+
+
     asyncio.run(main())

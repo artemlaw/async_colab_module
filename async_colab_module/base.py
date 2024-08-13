@@ -7,59 +7,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('API')
 
 
-def handle_request(max_retries=3, delay_seconds=15):
-    def decorator(func):
-        async def wrapper(*args, **kwargs):
-            for attempt in range(max_retries):
-                try:
-                    async with aiohttp.ClientSession() as session:
-                        response = await func(session, *args, **kwargs)
-                        response.raise_for_status()
-                        return response
-                except aiohttp.ClientResponseError as e:
-                    logger.error(f'Неудачный запрос, ошибка: {e}. Повтор через {delay_seconds} секунд.')
-                    await asyncio.sleep(delay_seconds)
-            logger.error(f'Достигнуто максимальное количество попыток ({max_retries}). Прекращение повторных запросов.')
-            return None
-        return wrapper
-    return decorator
-
-
-class ApiBase:
-    def __init__(self):
-        self.headers = {'Content-Type': 'application/json'}
-
-    @handle_request()
-    async def get_data(self, session, url, params=None):
-        async with session.get(url, headers=self.headers, params=params) as response:
-            return response
-
-    @handle_request()
-    async def post_data(self, session, url, data):
-        async with session.post(url, headers=self.headers, json=data) as response:
-            return response
-
-    @handle_request()
-    async def put_data(self, session, url, data):
-        async with session.put(url, headers=self.headers, json=data) as response:
-            return response
-
-    @handle_request()
-    async def delete_data(self, session, url):
-        async with session.delete(url, headers=self.headers) as response:
-            return response
-
-
 class AsyncHttpClient:
-    def __init__(self, max_retries=3, delay_seconds=15):
-        self.session = aiohttp.ClientSession()
+    def __init__(self, max_rete: int, time_period: int, semaphore: int = 5,
+                 max_retries: int = 3, delay_seconds: int = 10):
+        self.session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False))
         self.headers = {'Content-Type': 'application/json'}
+        # Ограничитель для 45 запросов каждые 3 секунды
+        self.rate_limiter = AsyncLimiter(max_rete, time_period)
+        # Ограничитель для не более semaphore параллельных запросов
+        self.semaphore = asyncio.Semaphore(semaphore)
+        # Три попытки при ошибке, через 10 секунд
         self.max_retries = max_retries
         self.delay_seconds = delay_seconds
-        # Ограничитель для 45 запросов каждые 3 секунды
-        self.rate_limiter = AsyncLimiter(45, 3)
-        # Ограничитель для не более 5 параллельных запросов
-        self.semaphore = asyncio.Semaphore(5)
 
     async def handle_request_errors(self, func, *args, **kwargs):
         for attempt in range(self.max_retries):
@@ -67,9 +26,13 @@ class AsyncHttpClient:
                 return await func(*args, **kwargs)
             except aiohttp.ClientResponseError as e:
                 if attempt < self.max_retries - 1:
+                    logger.error(f'Неудачный запрос, ошибка: {e}. Повтор через {self.delay_seconds} секунд.')
                     await asyncio.sleep(self.delay_seconds)
                 else:
-                    raise e
+                    logger.error(
+                        f'Достигнуто максимальное количество попыток ({self.max_retries}). '
+                        f'Прекращение повторных запросов.')
+        return None
 
     async def get(self, url, params=None):
         return await self.handle_request_errors(self._get, url, params=params)
@@ -88,20 +51,27 @@ class AsyncHttpClient:
             async with self.rate_limiter:
                 async with self.session.get(url, headers=self.headers, params=params) as response:
                     if not response.ok:
-                        raise aiohttp.ClientResponseError(history=response.history, status=response.status, message=response.reason, request_info=response.request_info)
+                        raise aiohttp.ClientResponseError(history=response.history, status=response.status,
+                                                          message=response.reason, request_info=response.request_info)
                     return await response.json()
 
     async def _post(self, url, json):
-        async with self.session.post(url, headers=self.headers, json=json) as response:
-            return await response.json()
+        async with self.semaphore:
+            async with self.rate_limiter:
+                async with self.session.post(url, headers=self.headers, json=json) as response:
+                    return await response.json()
 
     async def _put(self, url, json):
-        async with self.session.put(url, headers=self.headers, json=json) as response:
-            return await response.json()
+        async with self.semaphore:
+            async with self.rate_limiter:
+                async with self.session.put(url, headers=self.headers, json=json) as response:
+                    return await response.json()
 
     async def _delete(self, url):
-        async with self.session.delete(url, headers=self.headers) as response:
-            return await response.json()
+        async with self.semaphore:
+            async with self.rate_limiter:
+                async with self.session.delete(url, headers=self.headers) as response:
+                    return await response.json()
 
     async def close(self):
         await self.session.close()
@@ -116,7 +86,7 @@ class AsyncHttpClient:
 if __name__ == '__main__':
 
     async def main():
-        async with AsyncHttpClient() as client:
+        async with AsyncHttpClient(max_rete=45, time_period=3) as client:
             data = await client.get('https://jsonplaceholder.typicode.com/todos/1')
             print(data)
 
