@@ -167,6 +167,7 @@ async def get_report(wb_client, base_dict, nm_ids_dict, from_date, to_date):
     else:
         progress_bar.update(100)
         print('На указанный интервал нет данных для отчета')
+    await wb_client.close()
 
 
 def submit_form(wb_client, base_dict, nm_ids_dict, from_input, to_input):
