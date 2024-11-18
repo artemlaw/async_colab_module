@@ -75,7 +75,8 @@ async def get_desired_prices(plan_margin: float = 25.0, fbs: bool = True):
     print("Номенклатура которая есть в ЯндексМаркете, но не связана в МС:")
     print("\n".join(ya_set - ms_set))
     data_for_report = [
-        get_ya_data_(article, result_dict[article], plan_margin) for article in result_dict
+        get_ya_data_(article, result_dict[article], plan_margin)
+        for article in result_dict
     ]
     print('Формирую отчет "Рекомендуемые цены"')
     # progress_bar.update(50)
@@ -99,8 +100,10 @@ async def get_desired_prices(plan_margin: float = 25.0, fbs: bool = True):
     ]
     path_xls_file = "ya_рекомендуемые_цены.xlsx"
     df.to_excel(path_xls_file, sheet_name="Список YA", index=False)
+    print("Файл отчета готов")
+    files.download(path_xls_file)
 
-    print(df)
+    # print(df)
 
     # Определение комиссии маркетплейса
     # Яндекс
