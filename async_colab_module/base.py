@@ -10,7 +10,8 @@ logger = logging.getLogger('API')
 class AsyncHttpClient:
     def __init__(self, max_rete: int, time_period: int, semaphore: int = 5,
                  max_retries: int = 3, delay_seconds: int = 10):
-        self.session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False))
+        self.session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False),
+                                             timeout=aiohttp.ClientTimeout(total=60))
         self.headers = {'Content-Type': 'application/json'}
         # Ограничитель для 45 запросов каждые 3 секунды
         self.rate_limiter = AsyncLimiter(max_rete, time_period)

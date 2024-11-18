@@ -58,7 +58,7 @@ class WB(AsyncHttpClient):
                 break
         return products_list
 
-    async def get_orders(self, from_data: str):
+    async def get_orders(self, from_data):
         url = 'https://statistics-api.wildberries.ru/api/v1/supplier/orders'
         params = {'dateFrom': from_data, 'flag': 1}
         result = await self.get(url, params)
@@ -93,7 +93,7 @@ class WB(AsyncHttpClient):
 
 
 if __name__ == '__main__':
-    ms_token, wb_token = get_api_tokens()
+    ms_token, wb_token, _ = get_api_tokens()
 
     async def main():
         async with WB(api_key=wb_token, max_rete=45, time_period=3) as wb_client:

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from async_colab_module import MoySklad, get_api_tokens
 
-ms_token, wb_token = get_api_tokens()
+ms_token, wb_token, ym_token = get_api_tokens()
 
 
 @pytest.fixture

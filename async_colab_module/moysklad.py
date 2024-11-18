@@ -47,7 +47,7 @@ class MoySklad(AsyncHttpClient):
 
 
 if __name__ == '__main__':
-    ms_token, wb_token = get_api_tokens()
+    ms_token, wb_token, _ = get_api_tokens()
 
 
     async def main():
