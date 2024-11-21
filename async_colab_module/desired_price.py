@@ -3,6 +3,9 @@ import logging
 import pandas as pd
 from pprint import pprint
 
+from openpyxl.workbook import Workbook
+from openpyxl.styles import NamedStyle, Font, PatternFill, Border, Side, Alignment
+
 from async_colab_module import (
     get_api_tokens,
     MoySklad,
@@ -10,6 +13,7 @@ from async_colab_module import (
     get_stock_for_bundle,
     get_ya_data_,
 )
+from async_colab_module.tabstyle import TabStyles
 from async_colab_module.ya_market import (
     YM,
     get_ya_campaign_and_business_ids,
@@ -72,8 +76,11 @@ async def get_desired_prices(plan_margin: float = 25.0, fbs: bool = True):
         for key in ya_set & ms_set
     }
 
-    print("Номенклатура которая есть в ЯндексМаркете, но не связана в МС:")
-    print("\n".join(ya_set - ms_set))
+    ya_ms_set = ya_set - ms_set
+    if ya_ms_set:
+        print("Номенклатура которая есть в ЯндексМаркете, но не связана в МС:")
+        print("\n".join(ya_ms_set))
+
     data_for_report = [
         get_ya_data_(article, result_dict[article], plan_margin)
         for article in result_dict
@@ -83,6 +90,30 @@ async def get_desired_prices(plan_margin: float = 25.0, fbs: bool = True):
     pd.set_option("display.max_columns", None)
     pd.set_option("display.max_rows", None)
     df = pd.DataFrame(data_for_report)
+    df_total = (
+        df.agg(
+            {
+                "stock": "sum",
+                "price": "sum",
+                "recommended_price": "sum",
+                "prime_cost": "sum",
+                "commission": "sum",
+                "acquiring": "sum",
+                "delivery": "sum",
+                "crossregional_delivery": "sum",
+                "sorting": "sum",
+                "profit": "sum",
+            }
+        )
+        .to_frame()
+        .T
+    )
+    df_total["name"] = ""
+    df_total["article"] = ""
+    df_total["profitability"] = round((df_total["profit"] / df_total["price"]) * 100, 1)
+
+    df = pd.concat([df, df_total], ignore_index=True)
+
     df.columns = [
         "Номенклатура",
         "Артикул",
@@ -98,41 +129,97 @@ async def get_desired_prices(plan_margin: float = 25.0, fbs: bool = True):
         "Прибыль",
         "Рентабельность",
     ]
-    path_xls_file = "ya_рекомендуемые_цены.xlsx"
-    df.to_excel(path_xls_file, sheet_name="Список YA", index=False)
+    # print(df)
+    path_xls_file = f'ya_{"fbs" if fbs else "express"}_рекомендуемые_цены.xlsx'
+    style = ExcelStyle()
+    style.style_dataframe(df, path_xls_file, "Номенклатура YA")
     print("Файл отчета готов")
     files.download(path_xls_file)
 
-    # print(df)
 
-    # Определение комиссии маркетплейса
-    # Яндекс
-    # _________________________________________
-    # Комиссия % от цены
-    # Прием платежа 1,9% от цены
-    #
-    # Доставка FBS покупателя - 4,5% от цены, но не более 500
-    #
-    # Доставка экспресс = 6% от цены, но не менее 80, не более 500
-    #
-    # Фиксированные расходы
-    # 0,12 руб
-    # +FBS
-    # 20 - обработка
-    # Доставка в округ или населенный пункт - от весообъема
+class ExcelStyle:
+    def __init__(
+        self,
+        header_font=None,
+        header_fill=None,
+        header_border=None,
+        cell_font=None,
+        cell_fill=None,
+        cell_border=None,
+    ):
+        self.header_style = NamedStyle(name="header_style")
+        self.cell_style = NamedStyle(name="cell_style")
 
-    # Мегамаркет
-    # _________________________________________
-    # Комиссия по категории из файла тут https://megamarket.ru/docs/percent_price_b2b/ или из готовых связок
-    #
-    # Комиссия за обработку платежей - 1,5% от цены (график выплат, разнится от 1,25 до 2%)
-    # Комиссия за сортировку отправлений - 10 руб.
-    # Комиссия за логистику - от объемного веса (фиксированный справочник для расчета) от 75р и до 275 если вес до 25кг
-    #
-    # Комиссия за доставку до покупателя - 5% от цены, но не менее 10р не более 500
+        self.border_side = Side(border_style="thin", color="C5B775")
 
+        self.header_style.font = (
+            header_font if header_font else Font(name="Calibri", bold=True)
+        )
+        self.header_style.fill = (
+            header_fill if header_fill else PatternFill("solid", fgColor="F4ECC5")
+        )
+        self.header_style.border = (
+            header_border
+            if header_border
+            else Border(
+                left=self.border_side,
+                right=self.border_side,
+                top=self.border_side,
+                bottom=self.border_side,
+            )
+        )
 
-# pprint(ya_products[-1])
+        self.cell_style.font = cell_font if cell_font else Font(name="Calibri")
+        self.cell_style.fill = cell_fill if cell_fill else PatternFill()
+        self.cell_style.border = (
+            cell_border
+            if cell_border
+            else Border(
+                left=self.border_side,
+                right=self.border_side,
+                top=self.border_side,
+                bottom=self.border_side,
+            )
+        )
+
+    def apply_to_workbook(self, workbook: Workbook):
+        if "header_style" not in workbook.style_names:
+            workbook.add_named_style(self.header_style)
+        if "cell_style" not in workbook.style_names:
+            workbook.add_named_style(self.cell_style)
+
+    def style_dataframe(self, df: pd.DataFrame, file_path: str, sheet_title: str):
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = sheet_title
+        sheet.sheet_format.defaultColWidth = 15
+        # Установите ширину для определенных столбцов
+        sheet.column_dimensions["A"].width = 30
+        sheet.column_dimensions["B"].width = 18
+        sheet.column_dimensions["C"].width = 10
+        tab_styles = TabStyles()
+
+        self.apply_to_workbook(workbook)
+
+        columns_to_align_right = [7, 8, 9, 10, 11, 12, 13]
+
+        for col_idx, column in enumerate(df.columns, start=1):
+            cell = sheet.cell(row=1, column=col_idx, value=column)
+            cell.style = self.header_style
+
+        for row_idx, row in enumerate(df.itertuples(index=False), start=2):
+            for col_idx, value in enumerate(row, start=1):
+                cell = sheet.cell(row=row_idx, column=col_idx, value=value)
+                cell.style = self.cell_style
+
+                if col_idx in columns_to_align_right:
+                    cell.alignment = tab_styles.columns_to_align_right
+                    cell.number_format = (
+                        "#,##0.0"  # Формат с одним знаком после запятой
+                    )
+
+        sheet.auto_filter.ref = sheet.dimensions
+        workbook.save(file_path)
 
 
 if __name__ == "__main__":
