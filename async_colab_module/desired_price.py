@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import pandas as pd
-from pprint import pprint
+# from pprint import pprint
 
 from openpyxl.workbook import Workbook
 from openpyxl.styles import NamedStyle, Font, PatternFill, Border, Side, Alignment
@@ -147,10 +147,11 @@ class ExcelStyle:
         cell_fill=None,
         cell_border=None,
     ):
-        self.header_style = NamedStyle(name="header_style")
-        self.cell_style = NamedStyle(name="cell_style")
 
         self.border_side = Side(border_style="thin", color="C5B775")
+
+        self.header_style = NamedStyle(name="header_style")
+        self.cell_style = NamedStyle(name="cell_style")
 
         self.header_style.font = (
             header_font if header_font else Font(name="Calibri", bold=True)
