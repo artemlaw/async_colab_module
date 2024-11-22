@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import pandas as pd
+
 # from pprint import pprint
 
 from openpyxl.workbook import Workbook
@@ -47,7 +48,6 @@ async def get_desired_prices(plan_margin: float = 25.0, fbs: bool = True):
         for product in ms_ya_products
     }
     logger.info(len(ms_ya_products_))
-    print(f"Мой склад: {len(ms_ya_products_)}")
     await ms_client.close()
 
     ym_client = YM(api_key=ym_token, max_rete=45, time_period=3)
