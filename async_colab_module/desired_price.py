@@ -30,7 +30,7 @@ async def get_desired_prices(plan_margin: float = 25.0, fbs: bool = True):
     ms_token, _, ym_token = get_api_tokens()
     ms_client = MoySklad(api_key=ms_token)
     products_ = await ms_client.get_bundles()
-
+    print(f"Мой склад: {len(products_)}")
     # Оставляем только Яндекс
     ms_ya_products = [
         product for product in products_ if "ЯндексМаркет" in product["pathName"]
